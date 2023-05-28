@@ -27,3 +27,19 @@ In order to be able to do the request you will need the following dependencies:
 ![settings](/img/sp-img4.PNG)
 - Copy the CLIENT ID and Client Secret
 - Finally use this information in the Post call in your postman collection in the authentication part. ![Postman collection](/img/sp-img5.PNG)
+6. Requirement.- Create a JMeter script to solve the business process [in this excel](/data/Performance_Test_Case_Template%20-%20PDF%20Creator.xls), to do it, you are going to need access to the follwing [Postman Collection](/postman/postman_collection_pdf_creation). <p>
+Finally in order to make the PDF collection work, you are going to need to get the a working session token (JWT token), follow the instructions below. <p>
+  - ### How to get your JWT token
+  - Go to the following page and create a free account [PDF Generator Account](https://pdfgeneratorapi.com/login). Login using your google or github account or create your account using your email and custom password.
+  - Once you have created your account you will see the following dasboard: <p>
+  ![dashboard](/img/pdf-1.PNG)
+  - Now go to the Templates section and create a new template using the create template button ![create template](/img/pdf-2.PNG)
+  - Do anything in the template and Save it with the name you want: ![Save tamplate](/img/pdf-2.1)
+  - The template now will appear in your template list if you go to Templates in the menu section.
+  - Now go to the **Account Settiings** Section in the left menu and in case you dont see any API Credentials listed like the image, then click in the highlghted button **Generate new pair Keys**
+  - Now click on **Generate Temporary JWT token** Button ![JWT Token](/img/pdf-3.PNG)
+  - You will see in the button of the screen your new created JWT token. Now copy this token and use it in your piostman collection. ![Token](/img/pdf-4.PNG)
+  - Finally use this copied JWT token in your postman collection in the Autentication section on the collection level like the following image: ![Postman reference](/img/pdf-5.PNG)
+  - ## IMPORTANT
+    - Use all the good practices that you know so far (Transactions, Assertions, Correlations and parameters)
+    - If you need to understand more about the API here is the [API Documentation](https://docs.pdfgeneratorapi.com/v3/#section/Authentication/Creating-a-JWT)

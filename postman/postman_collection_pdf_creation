@@ -1,0 +1,3283 @@
+{
+	"info": {
+		"_postman_id": "dc964cac-fbca-4f8d-b0e6-e250caf0e487",
+		"name": "PDF Generator API 3.1.1",
+		"description": "# Introduction\nPDF Generator API allows you easily generate transactional PDF documents and reduce the development and support costs by enabling your users to create and manage their document templates using a browser-based drag-and-drop document editor.\n\nThe PDF Generator API features a web API architecture, allowing you to code in the language of your choice. This API supports the JSON media type, and uses UTF-8 character encoding.\n\nYou can find our previous API documentation page with references to Simple and Signature authentication [here](https://docs.pdfgeneratorapi.com/legacy).\n\n## Base URL\nThe base URL for all the API endpoints is `https://us1.pdfgeneratorapi.com/api/v3`\n\nFor example\n* `https://us1.pdfgeneratorapi.com/api/v3/templates`\n* `https://us1.pdfgeneratorapi.com/api/v3/workspaces`\n* `https://us1.pdfgeneratorapi.com/api/v3/templates/123123`\n\n## Editor\nPDF Generator API comes with a powerful drag & drop editor that allows to create any kind of document templates, from barcode labels to invoices, quotes and reports. You can find tutorials and videos from our [Support Portal](https://support.pdfgeneratorapi.com).\n* [Component specification](https://support.pdfgeneratorapi.com/en/category/components-1ffseaj/)\n* [Expression Language documentation](https://support.pdfgeneratorapi.com/en/category/expression-language-q203pa/)\n* [Frequently asked questions and answers](https://support.pdfgeneratorapi.com/en/category/qanda-1ov519d/)\n\n## Definitions\n\n### Organization\nOrganization is a group of workspaces owned by your account.\n\n### Workspace\nWorkspace contains templates. Each workspace has access to their own templates and organization default templates.\n\n### Master Workspace\nMaster Workspace is the main/default workspace of your Organization. The Master Workspace identifier is the email you signed up with.\n\n### Default Template\nDefault template is a template that is available for all workspaces by default. You can set the template access type under Page Setup. If template has \"Organization\" access then your users can use them from the \"New\" menu in the Editor.\n\n### Data Field\nData Field is a placeholder for the specific data in your JSON data set. In this example JSON you can access the buyer name using Data Field `{paymentDetails::buyerName}`. The separator between depth levels is :: (two colons). When designing the template you don’t have to know every Data Field, our editor automatically extracts all the available fields from your data set and provides an easy way to insert them into the template.\n```\n{\n    \"documentNumber\": 1,\n    \"paymentDetails\": {\n        \"method\": \"Credit Card\",\n        \"buyerName\": \"John Smith\"\n    },\n    \"items\": [\n        {\n            \"id\": 1,\n            \"name\": \"Item one\"\n        }\n    ]\n}\n```\n\n*  *  *  *  *\n# Authentication\nThe PDF Generator API uses __JSON Web Tokens (JWT)__ to authenticate all API requests. These tokens offer a method to establish secure server-to-server authentication by transferring a compact JSON object with a signed payload of your account’s API Key and Secret.\nWhen authenticating to the PDF Generator API, a JWT should be generated uniquely by a __server-side application__ and included as a __Bearer Token__ in the header of each request.\n\n## Legacy Simple and Signature authentication\nYou can find our legacy documentation for Simple and Signature authentication [here](https://docs.pdfgeneratorapi.com/legacy).\n\n<SecurityDefinitions />\n\n## Accessing your API Key and Secret\nYou can find your __API Key__ and __API Secret__ from the __Account Settings__ page after you login to PDF Generator API [here](https://pdfgeneratorapi.com/login).\n\n## Creating a JWT\nJSON Web Tokens are composed of three sections: a header, a payload (containing a claim set), and a signature. The header and payload are JSON objects, which are serialized to UTF-8 bytes, then encoded using base64url encoding.\n\nThe JWT's header, payload, and signature are concatenated with periods (.). As a result, a JWT typically takes the following form:\n```\n{Base64url encoded header}.{Base64url encoded payload}.{Base64url encoded signature}\n```\n\nWe recommend and support libraries provided on [jwt.io](https://jwt.io/). While other libraries can create JWT, these recommended libraries are the most robust.\n\n### Header\nProperty `alg` defines which signing algorithm is being used. PDF Generator API users HS256.\nProperty `typ` defines the type of token and it is always JWT.\n```\n{\n  \"alg\": \"HS256\",\n  \"typ\": \"JWT\"\n}\n```\n\n### Payload\nThe second part of the token is the payload, which contains the claims  or the pieces of information being passed about the user and any metadata required.\nIt is mandatory to specify the following claims:\n* issuer (`iss`): Your API key\n* subject (`sub`): Workspace identifier\n* expiration time (`exp`): Timestamp (unix epoch time) until the token is valid. It is highly recommended to set the exp timestamp for a short period, i.e. a matter of seconds. This way, if a token is intercepted or shared, the token will only be valid for a short period of time.\n\n```\n{\n  \"iss\": \"ad54aaff89ffdfeff178bb8a8f359b29fcb20edb56250b9f584aa2cb0162ed4a\",\n  \"sub\": \"demo.example@actualreports.com\",\n  \"exp\": 1586112639\n}\n```\n\n### Signature\nTo create the signature part you have to take the encoded header, the encoded payload, a secret, the algorithm specified in the header, and sign that. The signature is used to verify the message wasn't changed along the way, and, in the case of tokens signed with a private key, it can also verify that the sender of the JWT is who it says it is.\n```\nHMACSHA256(\n    base64UrlEncode(header) + \".\" +\n    base64UrlEncode(payload),\n    API_SECRET)\n```\n\n### Putting all together\nThe output is three Base64-URL strings separated by dots. The following shows a JWT that has the previous header and payload encoded, and it is signed with a secret.\n```\neyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJhZDU0YWFmZjg5ZmZkZmVmZjE3OGJiOGE4ZjM1OWIyOWZjYjIwZWRiNTYyNTBiOWY1ODRhYTJjYjAxNjJlZDRhIiwic3ViIjoiZGVtby5leGFtcGxlQGFjdHVhbHJlcG9ydHMuY29tIn0.SxO-H7UYYYsclS8RGWO1qf0z1cB1m73wF9FLl9RCc1Q\n\n// Base64 encoded header: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\n// Base64 encoded payload: eyJpc3MiOiJhZDU0YWFmZjg5ZmZkZmVmZjE3OGJiOGE4ZjM1OWIyOWZjYjIwZWRiNTYyNTBiOWY1ODRhYTJjYjAxNjJlZDRhIiwic3ViIjoiZGVtby5leGFtcGxlQGFjdHVhbHJlcG9ydHMuY29tIn0\n// Signature: SxO-H7UYYYsclS8RGWO1qf0z1cB1m73wF9FLl9RCc1Q\n```\n\n## Testing with JWTs\nYou can create a temporary token in [Account Settings](https://pdfgeneratorapi.com/account/organization) page after you login to PDF Generator API. The generated token uses your email address as the subject (`sub`) value and is valid for __5 minutes__.\nYou can also use [jwt.io](https://jwt.io/) to generate test tokens for your API calls. These test tokens should never be used in production applications.\n*  *  *  *  *\n\nContact Support:\n Name: Support\n Email: support@pdfgeneratorapi.com",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "7233905"
+	},
+	"item": [
+		{
+			"name": "templates",
+			"item": [
+				{
+					"name": "{{template Id}}",
+					"item": [
+						{
+							"name": "Get template",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/templates/:templateId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates",
+										":templateId"
+									],
+									"variable": [
+										{
+											"key": "templateId",
+											"value": "607597",
+											"description": "(Required) Template unique identifier"
+										}
+									]
+								},
+								"description": "Returns template configuration"
+							},
+							"response": [
+								{
+									"name": "Template configuration as JSON object",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"response\": {\n  \"id\": 24382,\n  \"name\": \"Invoice template\",\n  \"tags\": [\n   \"invoice\",\n   \"orders\"\n  ],\n  \"isDraft\": true,\n  \"layout\": {\n   \"format\": \"A4\",\n   \"width\": 21,\n   \"height\": 29.7,\n   \"unit\": \"cm\",\n   \"orientation\": \"portrait\",\n   \"rotation\": 0,\n   \"margins\": {\n    \"top\": 0.5,\n    \"right\": 0.5,\n    \"bottom\": 0.5,\n    \"left\": 0.5\n   },\n   \"repeatLayout\": {\n    \"format\": \"A4\",\n    \"width\": 21,\n    \"height\": 29.7\n   },\n   \"emptyLabels\": 0\n  },\n  \"pages\": [\n   {\n    \"width\": 21,\n    \"height\": 29.7,\n    \"margins\": {\n     \"right\": 0.5,\n     \"bottom\": 0.5\n    },\n    \"components\": [\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     },\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     }\n    ]\n   },\n   {\n    \"width\": 21,\n    \"height\": 29.7,\n    \"margins\": {\n     \"right\": 0.5,\n     \"bottom\": 0.5\n    },\n    \"components\": [\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     },\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     }\n    ]\n   }\n  ],\n  \"dataSettings\": {},\n  \"editor\": {\n   \"heightMultiplier\": 2\n  }\n }\n}"
+								},
+								{
+									"name": "Unauthorized",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Unauthorized",
+									"code": 401,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Authentication failed\",\n \"status\": 401\n}"
+								},
+								{
+									"name": "Forbidden",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Forbidden",
+									"code": 403,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Access not granted\",\n \"status\": 403\n}"
+								},
+								{
+									"name": "Not Found",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Not Found",
+									"code": 404,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Entity not found\",\n \"status\": 404\n}"
+								},
+								{
+									"name": "Unprocessable Entity",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+									"code": 422,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Incorrect parameter value\",\n \"status\": 422\n}"
+								},
+								{
+									"name": "Internal Server Error",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Internal error\",\n \"status\": 500\n}"
+								}
+							]
+						},
+						{
+							"name": "Update template",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Modified_Template\",\n    \"tags\": [\n        \"invoice\",\n        \"perf\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates/:templateId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates",
+										":templateId"
+									],
+									"variable": [
+										{
+											"key": "templateId",
+											"value": "607611",
+											"description": "(Required) Template unique identifier"
+										}
+									]
+								},
+								"description": "Updates template configuration. The template configuration for pages and layout must be complete as the entire configuration is replaced and not merged."
+							},
+							"response": [
+								{
+									"name": "Template configuration as JSON object",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"name\": \"Invoice template\",\n    \"tags\": [\n        \"invoice\",\n        \"orders\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"response\": {\n  \"id\": 24382,\n  \"name\": \"Invoice template\",\n  \"tags\": [\n   \"invoice\",\n   \"orders\"\n  ],\n  \"isDraft\": true,\n  \"layout\": {\n   \"format\": \"A4\",\n   \"width\": 21,\n   \"height\": 29.7,\n   \"unit\": \"cm\",\n   \"orientation\": \"portrait\",\n   \"rotation\": 0,\n   \"margins\": {\n    \"top\": 0.5,\n    \"right\": 0.5,\n    \"bottom\": 0.5,\n    \"left\": 0.5\n   },\n   \"repeatLayout\": {\n    \"format\": \"A4\",\n    \"width\": 21,\n    \"height\": 29.7\n   },\n   \"emptyLabels\": 0\n  },\n  \"pages\": [\n   {\n    \"width\": 21,\n    \"height\": 29.7,\n    \"margins\": {\n     \"right\": 0.5,\n     \"bottom\": 0.5\n    },\n    \"components\": [\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     },\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     }\n    ]\n   },\n   {\n    \"width\": 21,\n    \"height\": 29.7,\n    \"margins\": {\n     \"right\": 0.5,\n     \"bottom\": 0.5\n    },\n    \"components\": [\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     },\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     }\n    ]\n   }\n  ],\n  \"dataSettings\": {},\n  \"editor\": {\n   \"heightMultiplier\": 2\n  }\n }\n}"
+								},
+								{
+									"name": "Unauthorized",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"name\": \"Invoice template\",\n    \"tags\": [\n        \"invoice\",\n        \"orders\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Unauthorized",
+									"code": 401,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Authentication failed\",\n \"status\": 401\n}"
+								},
+								{
+									"name": "Forbidden",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"name\": \"Invoice template\",\n    \"tags\": [\n        \"invoice\",\n        \"orders\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Forbidden",
+									"code": 403,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Access not granted\",\n \"status\": 403\n}"
+								},
+								{
+									"name": "Not Found",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"name\": \"Invoice template\",\n    \"tags\": [\n        \"invoice\",\n        \"orders\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Not Found",
+									"code": 404,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Entity not found\",\n \"status\": 404\n}"
+								},
+								{
+									"name": "Unprocessable Entity",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"name\": \"Invoice template\",\n    \"tags\": [\n        \"invoice\",\n        \"orders\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+									"code": 422,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Incorrect parameter value\",\n \"status\": 422\n}"
+								},
+								{
+									"name": "Internal Server Error",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"name\": \"Invoice template\",\n    \"tags\": [\n        \"invoice\",\n        \"orders\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Internal error\",\n \"status\": 500\n}"
+								}
+							]
+						},
+						{
+							"name": "Delete template",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/templates/:templateId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates",
+										":templateId"
+									],
+									"variable": [
+										{
+											"key": "templateId",
+											"value": "607679",
+											"description": "(Required) Template unique identifier"
+										}
+									]
+								},
+								"description": "Deletes the template from workspace"
+							},
+							"response": [
+								{
+									"name": "The request was successfully executed.",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"response\": {\n  \"success\": true\n }\n}"
+								},
+								{
+									"name": "Unauthorized",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Unauthorized",
+									"code": 401,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Authentication failed\",\n \"status\": 401\n}"
+								},
+								{
+									"name": "Forbidden",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Forbidden",
+									"code": 403,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Access not granted\",\n \"status\": 403\n}"
+								},
+								{
+									"name": "Not Found",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Not Found",
+									"code": 404,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Entity not found\",\n \"status\": 404\n}"
+								},
+								{
+									"name": "Unprocessable Entity",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+									"code": 422,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Incorrect parameter value\",\n \"status\": 422\n}"
+								},
+								{
+									"name": "Internal Server Error",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId"
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Internal error\",\n \"status\": 500\n}"
+								}
+							]
+						},
+						{
+							"name": "Copy template",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/templates/:templateId/copy?name=My copied template",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates",
+										":templateId",
+										"copy"
+									],
+									"query": [
+										{
+											"key": "name",
+											"value": "My copied template",
+											"description": "Name for the copied template. If name is not specified then the original name is used."
+										}
+									],
+									"variable": [
+										{
+											"key": "templateId",
+											"value": "607597",
+											"description": "(Required) Template unique identifier"
+										}
+									]
+								},
+								"description": "Creates a copy of a template to the workspace specified in authentication parameters."
+							},
+							"response": [
+								{
+									"name": "Template configuration as JSON object",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/copy?name=My copied template",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"copy"
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "My copied template"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"response\": {\n  \"id\": 24382,\n  \"name\": \"Invoice template\",\n  \"tags\": [\n   \"invoice\",\n   \"orders\"\n  ],\n  \"isDraft\": true,\n  \"layout\": {\n   \"format\": \"A4\",\n   \"width\": 21,\n   \"height\": 29.7,\n   \"unit\": \"cm\",\n   \"orientation\": \"portrait\",\n   \"rotation\": 0,\n   \"margins\": {\n    \"top\": 0.5,\n    \"right\": 0.5,\n    \"bottom\": 0.5,\n    \"left\": 0.5\n   },\n   \"repeatLayout\": {\n    \"format\": \"A4\",\n    \"width\": 21,\n    \"height\": 29.7\n   },\n   \"emptyLabels\": 0\n  },\n  \"pages\": [\n   {\n    \"width\": 21,\n    \"height\": 29.7,\n    \"margins\": {\n     \"right\": 0.5,\n     \"bottom\": 0.5\n    },\n    \"components\": [\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     },\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     }\n    ]\n   },\n   {\n    \"width\": 21,\n    \"height\": 29.7,\n    \"margins\": {\n     \"right\": 0.5,\n     \"bottom\": 0.5\n    },\n    \"components\": [\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     },\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     }\n    ]\n   }\n  ],\n  \"dataSettings\": {},\n  \"editor\": {\n   \"heightMultiplier\": 2\n  }\n }\n}"
+								},
+								{
+									"name": "Unauthorized",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/copy?name=My copied template",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"copy"
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "My copied template"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Unauthorized",
+									"code": 401,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Authentication failed\",\n \"status\": 401\n}"
+								},
+								{
+									"name": "Forbidden",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/copy?name=My copied template",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"copy"
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "My copied template"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Forbidden",
+									"code": 403,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Access not granted\",\n \"status\": 403\n}"
+								},
+								{
+									"name": "Not Found",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/copy?name=My copied template",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"copy"
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "My copied template"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Not Found",
+									"code": 404,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Entity not found\",\n \"status\": 404\n}"
+								},
+								{
+									"name": "Unprocessable Entity",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/copy?name=My copied template",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"copy"
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "My copied template"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+									"code": 422,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Incorrect parameter value\",\n \"status\": 422\n}"
+								},
+								{
+									"name": "Internal Server Error",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/copy?name=My copied template",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"copy"
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "My copied template"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Internal error\",\n \"status\": 500\n}"
+								}
+							]
+						},
+						{
+							"name": "Open editor",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates/:templateId/editor?language=en",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates",
+										":templateId",
+										"editor"
+									],
+									"query": [
+										{
+											"key": "language",
+											"value": "en",
+											"description": "Specify the editor UI language. Defaults to organization editor language."
+										}
+									],
+									"variable": [
+										{
+											"key": "templateId",
+											"value": "19375",
+											"description": "(Required) Template unique identifier"
+										}
+									]
+								},
+								"description": "Returns an unique URL which you can use to redirect your user to the editor from your application or use the generated URL as iframe source to show the editor within your application.\n"
+							},
+							"response": [
+								{
+									"name": "Returns an URL which you can use to redirect your user to the editor or use as iframe source",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/editor?language=en",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"editor"
+											],
+											"query": [
+												{
+													"key": "language",
+													"value": "en"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"response\": \"https://us1.pdfgeneratorapi.com/editor/open/2ff98760d39456c4b2cf974fef005ecf\"\n}"
+								},
+								{
+									"name": "Unauthorized",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/editor?language=en",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"editor"
+											],
+											"query": [
+												{
+													"key": "language",
+													"value": "en"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Unauthorized",
+									"code": 401,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Authentication failed\",\n \"status\": 401\n}"
+								},
+								{
+									"name": "Forbidden",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/editor?language=en",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"editor"
+											],
+											"query": [
+												{
+													"key": "language",
+													"value": "en"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Forbidden",
+									"code": 403,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Access not granted\",\n \"status\": 403\n}"
+								},
+								{
+									"name": "Not Found",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/editor?language=en",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"editor"
+											],
+											"query": [
+												{
+													"key": "language",
+													"value": "en"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Not Found",
+									"code": 404,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Entity not found\",\n \"status\": 404\n}"
+								},
+								{
+									"name": "Unprocessable Entity",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/editor?language=en",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"editor"
+											],
+											"query": [
+												{
+													"key": "language",
+													"value": "en"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+									"code": 422,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Incorrect parameter value\",\n \"status\": 422\n}"
+								},
+								{
+									"name": "Internal Server Error",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/editor?language=en",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"editor"
+											],
+											"query": [
+												{
+													"key": "language",
+													"value": "en"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Internal error\",\n \"status\": 500\n}"
+								}
+							]
+						},
+						{
+							"name": "Generate document",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates/:templateId/output?name=My document&format=pdf&output=base64",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates",
+										":templateId",
+										"output"
+									],
+									"query": [
+										{
+											"key": "name",
+											"value": "My document",
+											"description": "Document name, returned in the meta data."
+										},
+										{
+											"key": "format",
+											"value": "pdf",
+											"description": "Document format. The zip option will return a ZIP file with PDF files."
+										},
+										{
+											"key": "output",
+											"value": "base64",
+											"description": "Response format. With the url option, the document is stored for 30 days and automatically deleted."
+										}
+									],
+									"variable": [
+										{
+											"key": "templateId",
+											"value": "19375",
+											"description": "(Required) Template unique identifier"
+										}
+									]
+								},
+								"description": "Merges template with data and returns base64 encoded document or a public URL to a document. You can send json encoded data in request body or a public URL to your json file as the data parameter. NB! When the public URL option is used, the document is stored for 30 days and automatically deleted."
+							},
+							"response": [
+								{
+									"name": "Document data",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/output?name=My document&format=pdf&output=base64",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"output"
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "My document"
+												},
+												{
+													"key": "format",
+													"value": "pdf"
+												},
+												{
+													"key": "output",
+													"value": "base64"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"response\": \"JVBERi0xLjcKJeLjz9MKNyAwIG9iago8PCAvVHlwZSA...\",\n \"meta\": {\n  \"name\": \"a2bd25b8921f3dc7a440fd7f427f90a4.pdf\",\n  \"display_name\": \"a2bd25b8921f3dc7a440fd7f427f90a4\",\n  \"encoding\": \"base64\",\n  \"content-type\": \"application/pdf\"\n }\n}"
+								},
+								{
+									"name": "Unauthorized",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/output?name=My document&format=pdf&output=base64",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"output"
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "My document"
+												},
+												{
+													"key": "format",
+													"value": "pdf"
+												},
+												{
+													"key": "output",
+													"value": "base64"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Unauthorized",
+									"code": 401,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Authentication failed\",\n \"status\": 401\n}"
+								},
+								{
+									"name": "Forbidden",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/output?name=My document&format=pdf&output=base64",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"output"
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "My document"
+												},
+												{
+													"key": "format",
+													"value": "pdf"
+												},
+												{
+													"key": "output",
+													"value": "base64"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Forbidden",
+									"code": 403,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Access not granted\",\n \"status\": 403\n}"
+								},
+								{
+									"name": "Not Found",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/output?name=My document&format=pdf&output=base64",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"output"
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "My document"
+												},
+												{
+													"key": "format",
+													"value": "pdf"
+												},
+												{
+													"key": "output",
+													"value": "base64"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Not Found",
+									"code": 404,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Entity not found\",\n \"status\": 404\n}"
+								},
+								{
+									"name": "Unprocessable Entity",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/output?name=My document&format=pdf&output=base64",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"output"
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "My document"
+												},
+												{
+													"key": "format",
+													"value": "pdf"
+												},
+												{
+													"key": "output",
+													"value": "base64"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+									"code": 422,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Incorrect parameter value\",\n \"status\": 422\n}"
+								},
+								{
+									"name": "Internal Server Error",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"description": "Added as a part of security scheme: bearer",
+												"key": "Authorization",
+												"value": "Bearer <token>"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"id\": 12312,\n    \"name\": \"Sample Data\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/templates/:templateId/output?name=My document&format=pdf&output=base64",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"templates",
+												":templateId",
+												"output"
+											],
+											"query": [
+												{
+													"key": "name",
+													"value": "My document"
+												},
+												{
+													"key": "format",
+													"value": "pdf"
+												},
+												{
+													"key": "output",
+													"value": "base64"
+												}
+											],
+											"variable": [
+												{
+													"key": "templateId"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"error\": \"Internal error\",\n \"status\": 500\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Get templates",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/templates",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"templates"
+							]
+						},
+						"description": "Returns a list of templates available for the authenticated workspace"
+					},
+					"response": [
+						{
+							"name": "An array of template objects",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/templates",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"response\": [\n  {\n   \"id\": 24382,\n   \"name\": \"Invoice template\",\n   \"owner\": true,\n   \"modified\": \"2017-10-21 11:49:28\",\n   \"tags\": [\n    \"invoice\",\n    \"orders\"\n   ]\n  },\n  {\n   \"id\": 24382,\n   \"name\": \"Invoice template\",\n   \"owner\": true,\n   \"modified\": \"2017-10-21 11:49:28\",\n   \"tags\": [\n    \"invoice\",\n    \"orders\"\n   ]\n  }\n ]\n}"
+						},
+						{
+							"name": "Unauthorized",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/templates",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates"
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Authentication failed\",\n \"status\": 401\n}"
+						},
+						{
+							"name": "Forbidden",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/templates",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates"
+									]
+								}
+							},
+							"status": "Forbidden",
+							"code": 403,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Access not granted\",\n \"status\": 403\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/templates",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates"
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Entity not found\",\n \"status\": 404\n}"
+						},
+						{
+							"name": "Unprocessable Entity",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/templates",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates"
+									]
+								}
+							},
+							"status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+							"code": 422,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Incorrect parameter value\",\n \"status\": 422\n}"
+						},
+						{
+							"name": "Internal Server Error",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/templates",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates"
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Internal error\",\n \"status\": 500\n}"
+						}
+					]
+				},
+				{
+					"name": "Create template",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Invoice template\",\n    \"tags\": [\n        \"invoice\",\n        \"orders\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/templates",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"templates"
+							]
+						},
+						"description": "Creates a new template. If template configuration is not specified in the request body then an empty template is created. Template is placed to the workspace specified in authentication params. Template configuration must be sent in the request body."
+					},
+					"response": [
+						{
+							"name": "Template configuration as JSON object",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Invoice template\",\n    \"tags\": [\n        \"invoice\",\n        \"orders\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"response\": {\n  \"id\": 24382,\n  \"name\": \"Invoice template\",\n  \"tags\": [\n   \"invoice\",\n   \"orders\"\n  ],\n  \"isDraft\": true,\n  \"layout\": {\n   \"format\": \"A4\",\n   \"width\": 21,\n   \"height\": 29.7,\n   \"unit\": \"cm\",\n   \"orientation\": \"portrait\",\n   \"rotation\": 0,\n   \"margins\": {\n    \"top\": 0.5,\n    \"right\": 0.5,\n    \"bottom\": 0.5,\n    \"left\": 0.5\n   },\n   \"repeatLayout\": {\n    \"format\": \"A4\",\n    \"width\": 21,\n    \"height\": 29.7\n   },\n   \"emptyLabels\": 0\n  },\n  \"pages\": [\n   {\n    \"width\": 21,\n    \"height\": 29.7,\n    \"margins\": {\n     \"right\": 0.5,\n     \"bottom\": 0.5\n    },\n    \"components\": [\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     },\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     }\n    ]\n   },\n   {\n    \"width\": 21,\n    \"height\": 29.7,\n    \"margins\": {\n     \"right\": 0.5,\n     \"bottom\": 0.5\n    },\n    \"components\": [\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     },\n     {\n      \"cls\": \"labelComponent\",\n      \"id\": \"component-12313\",\n      \"width\": 3.5,\n      \"height\": 1,\n      \"top\": 4.2,\n      \"left\": 2.5,\n      \"zindex\": 102,\n      \"value\": \"${price}\",\n      \"dataIndex\": \"line_items\"\n     }\n    ]\n   }\n  ],\n  \"dataSettings\": {},\n  \"editor\": {\n   \"heightMultiplier\": 2\n  }\n }\n}"
+						},
+						{
+							"name": "Unauthorized",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Invoice template\",\n    \"tags\": [\n        \"invoice\",\n        \"orders\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates"
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Authentication failed\",\n \"status\": 401\n}"
+						},
+						{
+							"name": "Forbidden",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Invoice template\",\n    \"tags\": [\n        \"invoice\",\n        \"orders\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates"
+									]
+								}
+							},
+							"status": "Forbidden",
+							"code": 403,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Access not granted\",\n \"status\": 403\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Invoice template\",\n    \"tags\": [\n        \"invoice\",\n        \"orders\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates"
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Entity not found\",\n \"status\": 404\n}"
+						},
+						{
+							"name": "Unprocessable Entity",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Invoice template\",\n    \"tags\": [\n        \"invoice\",\n        \"orders\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates"
+									]
+								}
+							},
+							"status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+							"code": 422,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Incorrect parameter value\",\n \"status\": 422\n}"
+						},
+						{
+							"name": "Internal Server Error",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Invoice template\",\n    \"tags\": [\n        \"invoice\",\n        \"orders\"\n    ],\n    \"isDraft\": true,\n    \"layout\": {\n        \"format\": \"A4\",\n        \"width\": 21,\n        \"height\": 29.7,\n        \"unit\": \"cm\",\n        \"orientation\": \"portrait\",\n        \"rotaion\": 0,\n        \"margins\": {\n            \"top\": 0.5,\n            \"right\": 0.5,\n            \"bottom\": 0.5,\n            \"left\": 0.5\n        },\n        \"repeatLayout\": {\n            \"format\": \"A4\",\n            \"width\": 21,\n            \"height\": 29.7\n        },\n        \"emptyLabels\": 0\n    },\n    \"pages\": [\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        },\n        {\n            \"width\": 21,\n            \"height\": 29.7,\n            \"margins\": {\n                \"right\": 0.5,\n                \"bottom\": 0.5\n            },\n            \"components\": [\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                },\n                {\n                    \"cls\": \"labelComponent\",\n                    \"id\": \"component-12313\",\n                    \"width\": 3.5,\n                    \"height\": 1,\n                    \"top\": 4.2,\n                    \"left\": 2.5,\n                    \"zindex\": 102,\n                    \"value\": \"${price}\",\n                    \"dataIndex\": \"line_items\"\n                }\n            ]\n        }\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates"
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Internal error\",\n \"status\": 500\n}"
+						}
+					]
+				},
+				{
+					"name": "Generate document (multiple templates)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    {\n        \"template\": 52272,\n        \"data\": {\n            \"key\": \"value\"\n        }\n    },\n    {\n        \"template\": 52273,\n        \"data\": {\n            \"key2\": \"value2\"\n        }\n    }\n]"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/templates/output?name=My document&format=pdf&output=base64",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"templates",
+								"output"
+							],
+							"query": [
+								{
+									"key": "name",
+									"value": "My document",
+									"description": "Document name, returned in the meta data."
+								},
+								{
+									"key": "format",
+									"value": "pdf",
+									"description": "Document format. The zip option will return a ZIP file with PDF files."
+								},
+								{
+									"key": "output",
+									"value": "base64",
+									"description": "Response format. With the url option, the document is stored for 30 days and automatically deleted."
+								}
+							]
+						},
+						"description": "Allows to merge multiples template with data and returns base64 encoded document or public URL to a document. NB! When the public URL option is used, the document is stored for 30 days and automatically deleted."
+					},
+					"response": [
+						{
+							"name": "Document data",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "[\n    {\n        \"template\": 52272,\n        \"data\": {\n            \"key\": \"value\"\n        }\n    },\n    {\n        \"template\": 52273,\n        \"data\": {\n            \"key2\": \"value2\"\n        }\n    }\n]"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates/output?name=My document&format=pdf&output=base64",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates",
+										"output"
+									],
+									"query": [
+										{
+											"key": "name",
+											"value": "My document"
+										},
+										{
+											"key": "format",
+											"value": "pdf"
+										},
+										{
+											"key": "output",
+											"value": "base64"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"response\": \"JVBERi0xLjcKJeLjz9MKNyAwIG9iago8PCAvVHlwZSA...\",\n \"meta\": {\n  \"name\": \"a2bd25b8921f3dc7a440fd7f427f90a4.pdf\",\n  \"display_name\": \"a2bd25b8921f3dc7a440fd7f427f90a4\",\n  \"encoding\": \"base64\",\n  \"content-type\": \"application/pdf\"\n }\n}"
+						},
+						{
+							"name": "Unauthorized",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "[\n    {\n        \"template\": 52272,\n        \"data\": {\n            \"key\": \"value\"\n        }\n    },\n    {\n        \"template\": 52273,\n        \"data\": {\n            \"key2\": \"value2\"\n        }\n    }\n]"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates/output?name=My document&format=pdf&output=base64",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates",
+										"output"
+									],
+									"query": [
+										{
+											"key": "name",
+											"value": "My document"
+										},
+										{
+											"key": "format",
+											"value": "pdf"
+										},
+										{
+											"key": "output",
+											"value": "base64"
+										}
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Authentication failed\",\n \"status\": 401\n}"
+						},
+						{
+							"name": "Forbidden",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "[\n    {\n        \"template\": 52272,\n        \"data\": {\n            \"key\": \"value\"\n        }\n    },\n    {\n        \"template\": 52273,\n        \"data\": {\n            \"key2\": \"value2\"\n        }\n    }\n]"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates/output?name=My document&format=pdf&output=base64",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates",
+										"output"
+									],
+									"query": [
+										{
+											"key": "name",
+											"value": "My document"
+										},
+										{
+											"key": "format",
+											"value": "pdf"
+										},
+										{
+											"key": "output",
+											"value": "base64"
+										}
+									]
+								}
+							},
+							"status": "Forbidden",
+							"code": 403,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Access not granted\",\n \"status\": 403\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "[\n    {\n        \"template\": 52272,\n        \"data\": {\n            \"key\": \"value\"\n        }\n    },\n    {\n        \"template\": 52273,\n        \"data\": {\n            \"key2\": \"value2\"\n        }\n    }\n]"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates/output?name=My document&format=pdf&output=base64",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates",
+										"output"
+									],
+									"query": [
+										{
+											"key": "name",
+											"value": "My document"
+										},
+										{
+											"key": "format",
+											"value": "pdf"
+										},
+										{
+											"key": "output",
+											"value": "base64"
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Entity not found\",\n \"status\": 404\n}"
+						},
+						{
+							"name": "Unprocessable Entity",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "[\n    {\n        \"template\": 52272,\n        \"data\": {\n            \"key\": \"value\"\n        }\n    },\n    {\n        \"template\": 52273,\n        \"data\": {\n            \"key2\": \"value2\"\n        }\n    }\n]"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates/output?name=My document&format=pdf&output=base64",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates",
+										"output"
+									],
+									"query": [
+										{
+											"key": "name",
+											"value": "My document"
+										},
+										{
+											"key": "format",
+											"value": "pdf"
+										},
+										{
+											"key": "output",
+											"value": "base64"
+										}
+									]
+								}
+							},
+							"status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+							"code": 422,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Incorrect parameter value\",\n \"status\": 422\n}"
+						},
+						{
+							"name": "Internal Server Error",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "[\n    {\n        \"template\": 52272,\n        \"data\": {\n            \"key\": \"value\"\n        }\n    },\n    {\n        \"template\": 52273,\n        \"data\": {\n            \"key2\": \"value2\"\n        }\n    }\n]"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/templates/output?name=My document&format=pdf&output=base64",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"templates",
+										"output"
+									],
+									"query": [
+										{
+											"key": "name",
+											"value": "My document"
+										},
+										{
+											"key": "format",
+											"value": "pdf"
+										},
+										{
+											"key": "output",
+											"value": "base64"
+										}
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Internal error\",\n \"status\": 500\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "workspaces/{{workspace Id}}",
+			"item": [
+				{
+					"name": "Get workspace",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/workspaces/:workspaceId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"workspaces",
+								":workspaceId"
+							],
+							"variable": [
+								{
+									"key": "workspaceId",
+									"value": "demo.example@actualreports.com",
+									"description": "(Required) Workspace identifier"
+								}
+							]
+						},
+						"description": "Returns workspace information"
+					},
+					"response": [
+						{
+							"name": "Workspace information",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/workspaces/:workspaceId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"workspaces",
+										":workspaceId"
+									],
+									"variable": [
+										{
+											"key": "workspaceId"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"response\": {\n  \"id\": 1,\n  \"identifier\": \"demo.example@actualreports.com\",\n  \"is_master_workspace\": false,\n  \"created_at\": \"2020-04-01 12:03:12\"\n }\n}"
+						},
+						{
+							"name": "Unauthorized",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/workspaces/:workspaceId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"workspaces",
+										":workspaceId"
+									],
+									"variable": [
+										{
+											"key": "workspaceId"
+										}
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Authentication failed\",\n \"status\": 401\n}"
+						},
+						{
+							"name": "Forbidden",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/workspaces/:workspaceId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"workspaces",
+										":workspaceId"
+									],
+									"variable": [
+										{
+											"key": "workspaceId"
+										}
+									]
+								}
+							},
+							"status": "Forbidden",
+							"code": 403,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Access not granted\",\n \"status\": 403\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/workspaces/:workspaceId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"workspaces",
+										":workspaceId"
+									],
+									"variable": [
+										{
+											"key": "workspaceId"
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Entity not found\",\n \"status\": 404\n}"
+						},
+						{
+							"name": "Unprocessable Entity",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/workspaces/:workspaceId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"workspaces",
+										":workspaceId"
+									],
+									"variable": [
+										{
+											"key": "workspaceId"
+										}
+									]
+								}
+							},
+							"status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+							"code": 422,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Incorrect parameter value\",\n \"status\": 422\n}"
+						},
+						{
+							"name": "Internal Server Error",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/workspaces/:workspaceId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"workspaces",
+										":workspaceId"
+									],
+									"variable": [
+										{
+											"key": "workspaceId"
+										}
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Internal error\",\n \"status\": 500\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete workspace",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/workspaces/:workspaceId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"workspaces",
+								":workspaceId"
+							],
+							"variable": [
+								{
+									"key": "workspaceId",
+									"value": "demo.example@actualreports.com",
+									"description": "(Required) Workspace identifier"
+								}
+							]
+						},
+						"description": "Deletes the workspace"
+					},
+					"response": [
+						{
+							"name": "The request was successfully executed.",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/workspaces/:workspaceId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"workspaces",
+										":workspaceId"
+									],
+									"variable": [
+										{
+											"key": "workspaceId"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"response\": {\n  \"success\": true\n }\n}"
+						},
+						{
+							"name": "Unauthorized",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/workspaces/:workspaceId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"workspaces",
+										":workspaceId"
+									],
+									"variable": [
+										{
+											"key": "workspaceId"
+										}
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Authentication failed\",\n \"status\": 401\n}"
+						},
+						{
+							"name": "Forbidden",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/workspaces/:workspaceId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"workspaces",
+										":workspaceId"
+									],
+									"variable": [
+										{
+											"key": "workspaceId"
+										}
+									]
+								}
+							},
+							"status": "Forbidden",
+							"code": 403,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Access not granted\",\n \"status\": 403\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/workspaces/:workspaceId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"workspaces",
+										":workspaceId"
+									],
+									"variable": [
+										{
+											"key": "workspaceId"
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Entity not found\",\n \"status\": 404\n}"
+						},
+						{
+							"name": "Unprocessable Entity",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/workspaces/:workspaceId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"workspaces",
+										":workspaceId"
+									],
+									"variable": [
+										{
+											"key": "workspaceId"
+										}
+									]
+								}
+							},
+							"status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+							"code": 422,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Incorrect parameter value\",\n \"status\": 422\n}"
+						},
+						{
+							"name": "Internal Server Error",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [
+									{
+										"description": "Added as a part of security scheme: bearer",
+										"key": "Authorization",
+										"value": "Bearer <token>"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/workspaces/:workspaceId",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"workspaces",
+										":workspaceId"
+									],
+									"variable": [
+										{
+											"key": "workspaceId"
+										}
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"error\": \"Internal error\",\n \"status\": 500\n}"
+						}
+					]
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiIxN2U2ZDFjM2JmOWE2MGZmOTNmMmI3NDlhNWY0NmNjZjhhOWNjYjNmOTk5NWU1Y2FlNWNiYjNkODA4Nzk3MWMyIiwic3ViIjoiYW5nZWwuZWxpc2VvQGdtYWlsLmNvbSIsImV4cCI6MTY3ODY1ODIwOH0.kvcuUp2oVuj4o6Hx53ULuZ_hpeVxrjFbukAiEbBapGQ",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://us1.pdfgeneratorapi.com/api/v3",
+			"type": "string"
+		}
+	]
+}
